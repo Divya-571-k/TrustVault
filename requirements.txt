@@ -1,0 +1,6 @@
+fastapi[standard]
+sqlalchemy
+python-multipart
+pytest
+httpx
+pwdlib[argon2]
