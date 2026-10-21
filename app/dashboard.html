@@ -1,0 +1,426 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustVault Dashboard</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #172554;
+}
+
+header {
+    background: white;
+    padding: 20px 8%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px #0f172a10;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2563eb;
+}
+
+main {
+    max-width: 950px;
+    margin: 35px auto;
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    padding: 26px;
+    border-radius: 14px;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 18px #0f172a0a;
+}
+
+h1 { margin-top: 0; }
+h3 { color: #2563eb; }
+
+.status { color: #15803d; font-weight: bold; }
+
+button, .download {
+    background: #2563eb;
+    color: white;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+}
+
+button:hover, .download:hover { background: #1d4ed8; }
+button:disabled { opacity: 0.6; cursor: wait; }
+
+.secondary { background: #475569; }
+.danger { background: #dc2626; }
+
+input[type="file"] {
+    display: block;
+    margin: 18px 0;
+    max-width: 100%;
+}
+
+input[type="email"] {
+    width: 100%;
+    max-width: 430px;
+    padding: 11px;
+    margin: 10px 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.message {
+    margin-top: 14px;
+    overflow-wrap: anywhere;
+}
+
+.document {
+    border: 1px solid #e2e8f0;
+    padding: 16px;
+    border-radius: 10px;
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+}
+
+.filename {
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.empty { color: #64748b; }
+
+@media (max-width: 650px) {
+    main { margin: 15px auto; }
+    header { padding: 16px; }
+    .document {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+<header>
+    <div class="logo">🔐 TrustVault</div>
+    <button class="secondary" onclick="logout()">Logout</button>
+</header>
+
+<main>
+    <section class="card">
+        <h1>Welcome to TrustVault! 🎉</h1>
+        <p>Your secure document-sharing workspace.</p>
+        <p class="status">✓ Login successful</p>
+    </section>
+
+    <section class="card">
+        <h3>📤 Upload a Document</h3>
+        <p>PDF, TXT, DOC, DOCX, PNG, JPG or JPEG. Maximum 10 MB.</p>
+
+        <form id="uploadForm">
+            <input type="file" id="documentFile"
+                accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg" required>
+            <button type="submit" id="uploadButton">Upload Document</button>
+        </form>
+
+        <p id="uploadMessage" class="message" role="status"></p>
+    </section>
+
+    <section class="card">
+        <h3>📁 My Documents</h3>
+        <p>Upload chesina documents ni share leda download cheyyachu.</p>
+        <button onclick="loadDocuments()">Refresh Documents</button>
+        <div id="myDocuments">
+            <p class="empty">Loading documents...</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>🤝 Shared With Me</h3>
+        <p>Other TrustVault users meeku share chesina documents.</p>
+        <button onclick="loadDocuments()">Refresh Shared Documents</button>
+        <div id="sharedDocuments">
+            <p class="empty">Loading shared documents...</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>🔒 Security</h3>
+        <p>Documents ki access server-side permissions tho control avuthundhi.</p>
+    </section>
+</main>
+
+<script>
+const uploadMessage = document.getElementById("uploadMessage");
+const uploadButton = document.getElementById("uploadButton");
+
+async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+        credentials: "same-origin",
+        ...options
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "/";
+        throw new Error("Please log in again.");
+    }
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Request failed.");
+    }
+
+    return data;
+}
+
+document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const fileInput = document.getElementById("documentFile");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        uploadMessage.textContent = "Please select a file.";
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        uploadMessage.textContent = "File size must not exceed 10 MB.";
+        return;
+    }
+
+    const allowed = ["pdf", "txt", "doc", "docx", "png", "jpg", "jpeg"];
+    const extension = file.name.split(".").pop().toLowerCase();
+
+    if (!allowed.includes(extension)) {
+        uploadMessage.textContent = "Unsupported file format.";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    uploadButton.disabled = true;
+    uploadMessage.textContent = "Uploading...";
+
+    try {
+        const result = await apiRequest("/documents/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        uploadMessage.textContent = "✓ " + result.message;
+        fileInput.value = "";
+        await loadDocuments();
+    } catch (error) {
+        uploadMessage.textContent = "Error: " + error.message;
+    } finally {
+        uploadButton.disabled = false;
+    }
+});
+
+function makeText(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value;
+    return element;
+}
+
+function makeButton(label, className, action) {
+    const button = makeText("button", className || "", label);
+    button.type = "button";
+    button.addEventListener("click", action);
+    return button;
+}
+
+async function shareDocument(documentItem) {
+    const email = prompt(
+        "Registered TrustVault user email enter cheyyi:"
+    );
+
+    if (email === null) return;
+
+    if (!email.trim()) {
+        alert("Please enter an email address.");
+        return;
+    }
+
+    try {
+        const result = await apiRequest(
+            `/documents/${documentItem.id}/share`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email.trim() })
+            }
+        );
+
+        alert(result.message + "\nShared with: " + result.shared_with);
+        await loadDocuments();
+    } catch (error) {
+        alert("Share failed: " + error.message);
+    }
+}
+
+async function manageShares(documentItem) {
+    try {
+        const shares = await apiRequest(
+            `/documents/${documentItem.id}/shares`
+        );
+
+        if (shares.length === 0) {
+            alert("Ee document inka evarithonu share cheyyaledhu.");
+            return;
+        }
+
+        const activeShares = shares.filter(item => !item.revoked);
+
+        if (activeShares.length === 0) {
+            alert("Active shares emi levu.");
+            return;
+        }
+
+        const choice = prompt(
+            "Active shares:\n" +
+            activeShares.map(item => item.email).join("\n") +
+            "\n\nAccess revoke cheyyadaniki exact email copy chesi enter cheyyi:"
+        );
+
+        if (choice === null || !choice.trim()) return;
+
+        const email = choice.trim();
+        const exists = activeShares.some(
+            item => item.email.toLowerCase() === email.toLowerCase()
+        );
+
+        if (!exists) {
+            alert("Active share list lo aa email ledhu.");
+            return;
+        }
+
+        if (!confirm(email + " ki document access revoke cheyyala?")) return;
+
+        await apiRequest(
+            `/documents/${documentItem.id}/share/${encodeURIComponent(email)}`,
+            { method: "DELETE" }
+        );
+
+        alert("Document access revoked successfully.");
+        await loadDocuments();
+    } catch (error) {
+        alert("Could not manage shares: " + error.message);
+    }
+}
+
+function renderDocument(item, isShared) {
+    const row = document.createElement("div");
+    row.className = "document";
+
+    const details = document.createElement("div");
+
+    details.appendChild(
+        makeText("div", "filename", "📄 " + item.filename)
+    );
+
+    details.appendChild(
+        makeText("small", "", new Date(item.created_at).toLocaleString())
+    );
+
+    if (isShared && item.shared_by) {
+        details.appendChild(
+            makeText("p", "", "Shared by: " + item.shared_by)
+        );
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    const download = makeText("a", "download", "Download");
+    download.href = item.download_url;
+    actions.appendChild(download);
+
+    if (!isShared) {
+        actions.appendChild(
+            makeButton("Share", "", () => shareDocument(item))
+        );
+
+        actions.appendChild(
+            makeButton("Manage Shares", "secondary", () => manageShares(item))
+        );
+    }
+
+    row.append(details, actions);
+    return row;
+}
+
+async function loadDocuments() {
+    const mine = document.getElementById("myDocuments");
+    const shared = document.getElementById("sharedDocuments");
+
+    mine.replaceChildren(makeText("p", "empty", "Loading..."));
+    shared.replaceChildren(makeText("p", "empty", "Loading..."));
+
+    try {
+        const documents = await apiRequest("/documents");
+
+        mine.replaceChildren();
+        shared.replaceChildren();
+
+        const ownedDocs = documents.filter(item => item.type === "owned");
+        const sharedDocs = documents.filter(item => item.type === "shared");
+
+        if (ownedDocs.length === 0) {
+            mine.appendChild(makeText("p", "empty", "No documents uploaded yet."));
+        } else {
+            ownedDocs.forEach(item => mine.appendChild(renderDocument(item, false)));
+        }
+
+        if (sharedDocs.length === 0) {
+            shared.appendChild(makeText("p", "empty", "No documents shared with you yet."));
+        } else {
+            sharedDocs.forEach(item => shared.appendChild(renderDocument(item, true)));
+        }
+    } catch (error) {
+        mine.replaceChildren(makeText("p", "empty", "Error: " + error.message));
+        shared.replaceChildren(makeText("p", "empty", "Error: " + error.message));
+    }
+}
+
+async function logout() {
+    try {
+        await apiRequest("/logout", { method: "POST" });
+        window.location.href = "/";
+    } catch (error) {
+        alert("Logout failed: " + error.message);
+    }
+}
+
+loadDocuments();
+</script>
+</body>
+</html>
