@@ -6,9 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrustVault - Secure Documents</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -37,10 +35,7 @@
             text-align: center;
         }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 8px;
-        }
+        h2 { text-align: center; margin-bottom: 8px; }
 
         .subtitle {
             text-align: center;
@@ -74,14 +69,12 @@
             cursor: pointer;
         }
 
-        button:hover {
-            background: #1d4ed8;
-        }
+        button:hover { background: #1d4ed8; }
+        button:disabled { opacity: 0.6; cursor: wait; }
 
         #message {
             margin-top: 16px;
             text-align: center;
-            color: #b91c1c;
             font-size: 14px;
         }
 
@@ -119,10 +112,50 @@
 
     <script>
         document.getElementById("loginForm").addEventListener(
-            "submit", function(event) {
+            "submit", async function(event) {
                 event.preventDefault();
-                document.getElementById("message").textContent =
-                    "Login is not connected yet. Backend authentication is coming next.";
+
+                const message = document.getElementById("message");
+                const button = document.querySelector("button[type='submit']");
+
+                message.style.color = "#64748b";
+                message.textContent = "Signing in...";
+                button.disabled = true;
+
+                try {
+                    const response = await fetch("/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            email: document.getElementById("email").value,
+                            password: document.getElementById("password").value
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.detail || "Login failed");
+                    }
+
+                    message.style.color = "#15803d";
+                    message.textContent = "Login successful! Opening dashboard...";
+
+                    setTimeout(function() {
+                        window.location.href = "/dashboard";
+                    }, 800);
+
+                } catch (error) {
+                    message.style.color = "#b91c1c";
+                    message.textContent =
+                        error.message === "Failed to fetch"
+                        ? "Cannot connect to server. Check if it is running."
+                        : error.message;
+                } finally {
+                    button.disabled = false;
+                }
             }
         );
     </script>

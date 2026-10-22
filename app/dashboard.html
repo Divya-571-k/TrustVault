@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,7 +48,10 @@ main {
 h1 { margin-top: 0; }
 h3 { color: #2563eb; }
 
-.status { color: #15803d; font-weight: bold; }
+.status {
+    color: #15803d;
+    font-weight: bold;
+}
 
 button, .download {
     background: #2563eb;
@@ -62,8 +65,14 @@ button, .download {
     font-size: 14px;
 }
 
-button:hover, .download:hover { background: #1d4ed8; }
-button:disabled { opacity: 0.6; cursor: wait; }
+button:hover, .download:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
 
 .secondary { background: #475569; }
 .danger { background: #dc2626; }
@@ -72,15 +81,6 @@ input[type="file"] {
     display: block;
     margin: 18px 0;
     max-width: 100%;
-}
-
-input[type="email"] {
-    width: 100%;
-    max-width: 430px;
-    padding: 11px;
-    margin: 10px 0;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
 }
 
 .message {
@@ -115,6 +115,7 @@ input[type="email"] {
 @media (max-width: 650px) {
     main { margin: 15px auto; }
     header { padding: 16px; }
+
     .document {
         align-items: flex-start;
         flex-direction: column;
@@ -138,12 +139,18 @@ input[type="email"] {
 
     <section class="card">
         <h3>📤 Upload a Document</h3>
-        <p>PDF, TXT, DOC, DOCX, PNG, JPG or JPEG. Maximum 10 MB.</p>
+        <p>Supported formats: PDF, TXT, DOC, DOCX, PNG, JPG, JPEG. Maximum size: 10 MB.</p>
 
         <form id="uploadForm">
-            <input type="file" id="documentFile"
-                accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg" required>
-            <button type="submit" id="uploadButton">Upload Document</button>
+            <input
+                type="file"
+                id="documentFile"
+                accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg"
+                required
+            >
+            <button type="submit" id="uploadButton">
+                Upload Document
+            </button>
         </form>
 
         <p id="uploadMessage" class="message" role="status"></p>
@@ -151,7 +158,7 @@ input[type="email"] {
 
     <section class="card">
         <h3>📁 My Documents</h3>
-        <p>Upload chesina documents ni share leda download cheyyachu.</p>
+        <p>Manage, share, and download your uploaded documents.</p>
         <button onclick="loadDocuments()">Refresh Documents</button>
         <div id="myDocuments">
             <p class="empty">Loading documents...</p>
@@ -160,7 +167,7 @@ input[type="email"] {
 
     <section class="card">
         <h3>🤝 Shared With Me</h3>
-        <p>Other TrustVault users meeku share chesina documents.</p>
+        <p>Documents shared with you by other TrustVault users.</p>
         <button onclick="loadDocuments()">Refresh Shared Documents</button>
         <div id="sharedDocuments">
             <p class="empty">Loading shared documents...</p>
@@ -169,7 +176,7 @@ input[type="email"] {
 
     <section class="card">
         <h3>🔒 Security</h3>
-        <p>Documents ki access server-side permissions tho control avuthundhi.</p>
+        <p>Document access is controlled by server-side permissions.</p>
     </section>
 </main>
 
@@ -186,7 +193,7 @@ async function apiRequest(url, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (response.status === 401) {
-        alert("Session expired. Please log in again.");
+        alert("Your session has expired. Please log in again.");
         window.location.href = "/";
         throw new Error("Please log in again.");
     }
@@ -198,69 +205,88 @@ async function apiRequest(url, options = {}) {
     return data;
 }
 
-document.getElementById("uploadForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
+document.getElementById("uploadForm").addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
 
-    const fileInput = document.getElementById("documentFile");
-    const file = fileInput.files[0];
+        const fileInput = document.getElementById("documentFile");
+        const file = fileInput.files[0];
 
-    if (!file) {
-        uploadMessage.textContent = "Please select a file.";
-        return;
+        if (!file) {
+            uploadMessage.textContent = "Please select a file.";
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            uploadMessage.textContent =
+                "File size must not exceed 10 MB.";
+            return;
+        }
+
+        const allowed = [
+            "pdf", "txt", "doc", "docx",
+            "png", "jpg", "jpeg"
+        ];
+
+        const extension = file.name.split(".").pop().toLowerCase();
+
+        if (!allowed.includes(extension)) {
+            uploadMessage.textContent =
+                "Unsupported file format.";
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        uploadButton.disabled = true;
+        uploadMessage.textContent = "Uploading...";
+
+        try {
+            const result = await apiRequest("/documents/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            uploadMessage.textContent =
+                "✓ " + result.message;
+
+            fileInput.value = "";
+            await loadDocuments();
+
+        } catch (error) {
+            uploadMessage.textContent =
+                "Error: " + error.message;
+        } finally {
+            uploadButton.disabled = false;
+        }
     }
-
-    if (file.size > 10 * 1024 * 1024) {
-        uploadMessage.textContent = "File size must not exceed 10 MB.";
-        return;
-    }
-
-    const allowed = ["pdf", "txt", "doc", "docx", "png", "jpg", "jpeg"];
-    const extension = file.name.split(".").pop().toLowerCase();
-
-    if (!allowed.includes(extension)) {
-        uploadMessage.textContent = "Unsupported file format.";
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    uploadButton.disabled = true;
-    uploadMessage.textContent = "Uploading...";
-
-    try {
-        const result = await apiRequest("/documents/upload", {
-            method: "POST",
-            body: formData
-        });
-
-        uploadMessage.textContent = "✓ " + result.message;
-        fileInput.value = "";
-        await loadDocuments();
-    } catch (error) {
-        uploadMessage.textContent = "Error: " + error.message;
-    } finally {
-        uploadButton.disabled = false;
-    }
-});
+);
 
 function makeText(tag, className, value) {
     const element = document.createElement(tag);
-    if (className) element.className = className;
+
+    if (className) {
+        element.className = className;
+    }
+
     element.textContent = value;
     return element;
 }
 
 function makeButton(label, className, action) {
     const button = makeText("button", className || "", label);
+
     button.type = "button";
     button.addEventListener("click", action);
+
     return button;
 }
 
 async function shareDocument(documentItem) {
     const email = prompt(
-        "Registered TrustVault user email enter cheyyi:"
+        "Enter the email address of a registered TrustVault user:"
     );
 
     if (email === null) return;
@@ -275,13 +301,22 @@ async function shareDocument(documentItem) {
             `/documents/${documentItem.id}/share`,
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email.trim() })
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email.trim()
+                })
             }
         );
 
-        alert(result.message + "\nShared with: " + result.shared_with);
+        alert(
+            result.message +
+            "\nShared with: " + result.shared_with
+        );
+
         await loadDocuments();
+
     } catch (error) {
         alert("Share failed: " + error.message);
     }
@@ -294,36 +329,50 @@ async function manageShares(documentItem) {
         );
 
         if (shares.length === 0) {
-            alert("Ee document inka evarithonu share cheyyaledhu.");
+            alert(
+                "This document has not been shared with anyone yet."
+            );
             return;
         }
 
-        const activeShares = shares.filter(item => !item.revoked);
+        const activeShares = shares.filter(
+            item => !item.revoked && item.can_view
+        );
 
         if (activeShares.length === 0) {
-            alert("Active shares emi levu.");
+            alert("There are no active shares for this document.");
             return;
         }
 
         const choice = prompt(
             "Active shares:\n" +
             activeShares.map(item => item.email).join("\n") +
-            "\n\nAccess revoke cheyyadaniki exact email copy chesi enter cheyyi:"
+            "\n\nEnter the exact email address to revoke access:"
         );
 
         if (choice === null || !choice.trim()) return;
 
         const email = choice.trim();
+
         const exists = activeShares.some(
             item => item.email.toLowerCase() === email.toLowerCase()
         );
 
         if (!exists) {
-            alert("Active share list lo aa email ledhu.");
+            alert(
+                "That email address is not in the active share list."
+            );
             return;
         }
 
-        if (!confirm(email + " ki document access revoke cheyyala?")) return;
+        if (
+            !confirm(
+                "Do you want to revoke document access for " +
+                email + "?"
+            )
+        ) {
+            return;
+        }
 
         await apiRequest(
             `/documents/${documentItem.id}/share/${encodeURIComponent(email)}`,
@@ -332,6 +381,7 @@ async function manageShares(documentItem) {
 
         alert("Document access revoked successfully.");
         await loadDocuments();
+
     } catch (error) {
         alert("Could not manage shares: " + error.message);
     }
@@ -348,7 +398,11 @@ function renderDocument(item, isShared) {
     );
 
     details.appendChild(
-        makeText("small", "", new Date(item.created_at).toLocaleString())
+        makeText(
+            "small",
+            "",
+            new Date(item.created_at).toLocaleString()
+        )
     );
 
     if (isShared && item.shared_by) {
@@ -366,15 +420,24 @@ function renderDocument(item, isShared) {
 
     if (!isShared) {
         actions.appendChild(
-            makeButton("Share", "", () => shareDocument(item))
+            makeButton(
+                "Share",
+                "",
+                () => shareDocument(item)
+            )
         );
 
         actions.appendChild(
-            makeButton("Manage Shares", "secondary", () => manageShares(item))
+            makeButton(
+                "Manage Shares",
+                "secondary",
+                () => manageShares(item)
+            )
         );
     }
 
     row.append(details, actions);
+
     return row;
 }
 
@@ -382,8 +445,13 @@ async function loadDocuments() {
     const mine = document.getElementById("myDocuments");
     const shared = document.getElementById("sharedDocuments");
 
-    mine.replaceChildren(makeText("p", "empty", "Loading..."));
-    shared.replaceChildren(makeText("p", "empty", "Loading..."));
+    mine.replaceChildren(
+        makeText("p", "empty", "Loading documents...")
+    );
+
+    shared.replaceChildren(
+        makeText("p", "empty", "Loading shared documents...")
+    );
 
     try {
         const documents = await apiRequest("/documents");
@@ -391,23 +459,50 @@ async function loadDocuments() {
         mine.replaceChildren();
         shared.replaceChildren();
 
-        const ownedDocs = documents.filter(item => item.type === "owned");
-        const sharedDocs = documents.filter(item => item.type === "shared");
+        const ownedDocs = documents.filter(
+            item => item.type === "owned"
+        );
+
+        const sharedDocs = documents.filter(
+            item => item.type === "shared"
+        );
 
         if (ownedDocs.length === 0) {
-            mine.appendChild(makeText("p", "empty", "No documents uploaded yet."));
+            mine.appendChild(
+                makeText(
+                    "p",
+                    "empty",
+                    "No documents uploaded yet."
+                )
+            );
         } else {
-            ownedDocs.forEach(item => mine.appendChild(renderDocument(item, false)));
+            ownedDocs.forEach(item => {
+                mine.appendChild(renderDocument(item, false));
+            });
         }
 
         if (sharedDocs.length === 0) {
-            shared.appendChild(makeText("p", "empty", "No documents shared with you yet."));
+            shared.appendChild(
+                makeText(
+                    "p",
+                    "empty",
+                    "No documents have been shared with you yet."
+                )
+            );
         } else {
-            sharedDocs.forEach(item => shared.appendChild(renderDocument(item, true)));
+            sharedDocs.forEach(item => {
+                shared.appendChild(renderDocument(item, true));
+            });
         }
+
     } catch (error) {
-        mine.replaceChildren(makeText("p", "empty", "Error: " + error.message));
-        shared.replaceChildren(makeText("p", "empty", "Error: " + error.message));
+        mine.replaceChildren(
+            makeText("p", "empty", "Error: " + error.message)
+        );
+
+        shared.replaceChildren(
+            makeText("p", "empty", "Error: " + error.message)
+        );
     }
 }
 
@@ -424,3 +519,4 @@ loadDocuments();
 </script>
 </body>
 </html>
+```
