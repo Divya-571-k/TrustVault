@@ -4,3 +4,4 @@ python-multipart
 pytest
 httpx
 pwdlib[argon2]
+itsdangerous
