@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | TrustVault</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+        }
+
+        .card {
+            width: 100%;
+            max-width: 420px;
+            padding: 35px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            text-align: center;
+            color: #5b42a8;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 7px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #d5d5e5;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.12);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 24px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+
+        .login-link {
+            margin-top: 22px;
+            text-align: center;
+            color: #555;
+        }
+
+        a {
+            color: #6846b5;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="card">
+        <h1>TrustVault</h1>
+        <p class="subtitle">Create your secure account</p>
+
+        <form id="registerForm">
+            <label for="email">Email address</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter your email"
+                autocomplete="email"
+                required
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="At least 12 characters"
+                minlength="12"
+                autocomplete="new-password"
+                required
+            >
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <p id="message" role="status"></p>
+
+        <p class="login-link">
+            Already have an account?
+            <a href="/">Login here</a>
+        </p>
+    </main>
+
+    <script>
+        const form = document.getElementById("registerForm");
+        const message = document.getElementById("message");
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            message.textContent = "Creating your account...";
+            message.style.color = "#555";
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch("/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.detail || "Registration failed"
+                    );
+                }
+
+                message.style.color = "green";
+                message.textContent =
+                    "Registration successful! Redirecting to login...";
+
+                setTimeout(() => {
+                    window.location.href = "/";
+                }, 1200);
+
+            } catch (error) {
+                message.style.color = "#d93025";
+                message.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>

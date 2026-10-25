@@ -173,7 +173,11 @@ def dashboard(request: Request):
 @app.get("/health")
 def health():
     return {"status": "healthy"}
-
+@app.get("/register", include_in_schema=False)
+def register_page():
+    return FileResponse(
+        Path(__file__).with_name("register.html")
+    )
 
 # -------------------- REGISTER --------------------
 
